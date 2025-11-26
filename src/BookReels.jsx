@@ -12,73 +12,71 @@ import {
 import { useAuth } from "./AuthContext";
 import { loadUserData, saveUserData } from "./firebase";
 
-// Default static passages
 const PASSAGES = [
   {
     id: 1,
-    text: "It is a truth universally acknowledged...",
+    text: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.",
     book: "Pride and Prejudice",
     author: "Jane Austen",
     genre: "Classic Romance",
     color: "from-rose-900 to-pink-900",
   },
+
   {
     id: 2,
-    text: "All happy families are alike...",
+    text: "All happy families are alike; each unhappy family is unhappy in its own way. Everything was in confusion in the Oblonskys' house. The wife had discovered that the husband was carrying on an intrigue with a French girl, who had been a governess in their family, and she had announced to her husband that she could not go on living in the same house with him.",
     book: "Anna Karenina",
     author: "Leo Tolstoy",
     genre: "Literary Fiction",
     color: "from-slate-800 to-slate-900",
   },
+
   {
     id: 3,
-    text: "The man in black fled across the desert...",
-    book: "The Gunslinger",
-    author: "Stephen King",
-    genre: "Dark Fantasy",
+    text: "Mother died today. Or, maybe, yesterday; I can’t be sure. The telegram from the Home says: 'Your mother passed away. Funeral tomorrow. Deep sympathy.' Which leaves the matter doubtful; it could have been yesterday.",
+    book: "The Stranger",
+    author: "Albert Camus",
+    genre: "Philosophical Fiction",
     color: "from-orange-900 to-amber-950",
   },
+
   {
     id: 4,
-    text: "It was a pleasure to burn...",
+    text: "It was a pleasure to burn. It was a special pleasure to see things eaten, to see things blackened and changed. With the brass nozzle in his fists, with this great python spitting its venomous kerosene upon the world, the blood pounded in his head, and his hands were the hands of some amazing conductor playing all the symphonies of blazing and burning to bring down the tatters and charcoal ruins of history.",
     book: "Fahrenheit 451",
     author: "Ray Bradbury",
     genre: "Dystopian Fiction",
     color: "from-red-900 to-orange-950",
   },
+
   {
     id: 5,
-    text: "If you really want to hear about it...",
-    book: "The Catcher in the Rye",
-    author: "J.D. Salinger",
-    genre: "Coming of Age",
+    text: "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.",
+    book: "The Hobbit",
+    author: "J.R.R. Tolkien",
+    genre: "Fantasy Adventure",
     color: "from-blue-900 to-indigo-900",
   },
+
   {
     id: 6,
-    text: "In my younger and more vulnerable years...",
+    text: "In my younger and more vulnerable years my father gave me some advice that I've been turning over in my mind ever since. 'Whenever you feel like criticizing anyone,' he told me, 'just remember that all the people in this world haven't had the advantages that you've had.'",
     book: "The Great Gatsby",
     author: "F. Scott Fitzgerald",
     genre: "American Classic",
     color: "from-emerald-900 to-teal-900",
   },
+
   {
     id: 7,
-    text: "The sky above the port was the color of television...",
+    text: "The sky above the port was the color of television, tuned to a dead channel. 'It's not like I'm using,' Case heard someone say, as he shouldered his way through the crowd around the door of the Chat. 'It's like my body's developed this massive drug deficiency.' It was a Sprawl voice and a Sprawl joke.",
     book: "Neuromancer",
     author: "William Gibson",
     genre: "Cyberpunk",
     color: "from-purple-900 to-violet-950",
   },
-  {
-    id: 8,
-    text: "I write this sitting in the kitchen sink...",
-    book: "I Capture the Castle",
-    author: "Dodie Smith",
-    genre: "Literary Fiction",
-    color: "from-cyan-900 to-blue-950",
-  },
 ];
+
 
 export default function BookReels() {
   const { user } = useAuth();

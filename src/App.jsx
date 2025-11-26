@@ -17,6 +17,16 @@ export default function App() {
     <>
       {/* 🔥 Remount BookReels when user changes */}
       <BookReels key={user ? user.uid : "guest"} />
+      <a 
+        href="https://www.buymeacoffee.com/yashbijlani" 
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-5 right-5 z-[999] bg-yellow-400 text-black 
+                   font-semibold px-4 py-2 rounded-full shadow-xl 
+                   hover:bg-yellow-500 transition"
+      >
+        ☕ Buy Me a Coffee
+      </a>
 
       {/* AUTH & PROFILE CONTROLS */}
       <div className="fixed top-14 right-5 z-[500] flex items-center gap-3">
