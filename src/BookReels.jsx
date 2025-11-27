@@ -148,7 +148,7 @@ export default function BookReels() {
   //---------------------------------------------------------
   // CLOUD SYNC — Load user data on login / user change
   //---------------------------------------------------------
-  useEffect(() => {
+useEffect(() => {
     if (!user) return;
 
     let cancelled = false;
@@ -158,24 +158,19 @@ export default function BookReels() {
         const cloud = await loadUserData(user.uid);
         if (cancelled) return;
 
+        // Only load likes + bookmarks (NOT posts)
         if (cloud) {
           setLikes(cloud.likes || {});
           setBookmarks(cloud.bookmarks || {});
-          const posts = cloud.posts || [];
-          setUserPostsCloud(posts);
-
-          if (posts.length > 0) {
-            setPassages([...PASSAGES, ...posts]);
-          } else {
-            setPassages(PASSAGES);
-          }
         } else {
-          // no cloud doc yet for this user
           setLikes({});
           setBookmarks({});
-          setUserPostsCloud([]);
-          setPassages(PASSAGES);
         }
+
+        // ❗IMPORTANT: we DO NOT set userPostsCloud here
+        // ❗IMPORTANT: we DO NOT setPassages here
+        // Global posts will be loaded in the "load global feed" effect
+        // My posts will be computed from global posts
       } finally {
         if (!cancelled) {
           setCloudLoaded(true);
@@ -184,24 +179,30 @@ export default function BookReels() {
     }
 
     loadCloud();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user]);
 
   // GLOBAL FEED — Load posts created by all users
 useEffect(() => {
-    async function loadFeed() {
-      // load all posts from Firestore
-      const globalPosts = await loadGlobalPosts();
+  async function loadFeed() {
+    const globalPosts = await loadGlobalPosts();
 
-      // merge static default passages + global posts
-      setPassages([...PASSAGES, ...globalPosts]);
+    // 1) whole feed = default passages + all user posts
+    setPassages([...PASSAGES, ...globalPosts]);
+
+    // 2) "My posts" = only posts where uid matches current user
+    if (user) {
+      const mine = globalPosts.filter(p => p.uid === user.uid);
+      setUserPostsCloud(mine);
+    } else {
+      setUserPostsCloud([]);
     }
+  }
 
-    loadFeed();
-  }, []);
+  loadFeed();
+}, [user]);   // <-- IMPORTANT: depends on user
+
+
 
 
   //---------------------------------------------------------
@@ -285,6 +286,12 @@ useEffect(() => {
   //---------------------------------------------------------
 const handleSubmitPassage = async (e) => {
     e.preventDefault();
+    if (!user) return;
+
+    if (!formData.text.trim() || !formData.book.trim() || !formData.author.trim()) {
+      alert("Please fill in text, book, and author.");
+      return;
+    }
 
     const newPassage = {
       text: formData.text,
@@ -297,30 +304,60 @@ const handleSubmitPassage = async (e) => {
       userPhoto: user.photoURL,
     };
 
-    // Save globally
-    const added = await addGlobalPost(newPassage);
+    // 1) Save in GLOBAL /posts collection
+    const docRef = await addGlobalPost(newPassage);
 
-    // Show instantly in feed
-    setPassages((prev) => [...prev, { id: added.id, ...newPassage }]);
+    // 2) Build the final post with Firestore's document ID
+    const finalPost = {
+      id: docRef.id,    // 🔥 THIS IS THE ID WE USE EVERYWHERE
+      ...newPassage,
+    };
 
-    // Reset form
+    // 3) Add to main feed
+    setPassages(prev => [...prev, finalPost]);
+
+    // 4) Add to "My Posts"
+    setUserPostsCloud(prev => [...prev, finalPost]);
+
+    // 5) Reset form and close
+    setFormData({
+      text: "",
+      book: "",
+      author: "",
+      genre: "",
+      color: "from-indigo-900 to-purple-900",
+    });
     setShowAddForm(false);
-    scrollToIndex(passages.length);
+
+    // optional: scroll to end
+    setTimeout(() => {
+      scrollToIndex(passages.length);
+    }, 200);
   };
-  
+
 const handleDeletePost = async (postId) => {
   if (!user) return;
 
-  const confirmDelete = window.confirm("Delete this passage?");
-  if (!confirmDelete) return;
+  console.log("Trying to delete ID:", postId, "type:", typeof postId);
 
-  // Remove from UI immediately
+  if (typeof postId !== "string") {
+    alert("This post was created before global sync and cannot be deleted.");
+    return;
+  }
+
+  if (!window.confirm("Delete this passage?")) return;
+
   setUserPostsCloud(prev => prev.filter(p => p.id !== postId));
   setPassages(prev => prev.filter(p => p.id !== postId));
 
-  // Remove from Firestore
-  await deleteGlobalPost(postId);
+  try {
+    await deleteGlobalPost(postId);
+    console.log("Successfully deleted", postId);
+  } catch (err) {
+    console.error("Failed to delete:", err);
+  }
 };
+
 
 
   //---------------------------------------------------------
