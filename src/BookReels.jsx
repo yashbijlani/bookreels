@@ -10,8 +10,14 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "./AuthContext";
-import { loadUserData, saveUserData } from "./firebase";
+import {
+  loadUserData,
+  saveUserData,
+  addGlobalPost,
+  loadGlobalPosts,
+} from "./firebase";
 
+// Default static passages
 const PASSAGES = [
   {
     id: 1,
@@ -172,6 +178,20 @@ export default function BookReels() {
     };
   }, [user]);
 
+  // GLOBAL FEED — Load posts created by all users
+useEffect(() => {
+    async function loadFeed() {
+      // load all posts from Firestore
+      const globalPosts = await loadGlobalPosts();
+
+      // merge static default passages + global posts
+      setPassages([...PASSAGES, ...globalPosts]);
+    }
+
+    loadFeed();
+  }, []);
+
+
   //---------------------------------------------------------
   // CLOUD SYNC — Save likes to Firestore
   //---------------------------------------------------------
@@ -251,47 +271,31 @@ export default function BookReels() {
   //---------------------------------------------------------
   // ADD NEW PASSAGE (Cloud Sync)
   //---------------------------------------------------------
-  const handleSubmitPassage = async (e) => {
+const handleSubmitPassage = async (e) => {
     e.preventDefault();
 
-    if (!formData.text.trim() || !formData.book.trim() || !formData.author.trim()) {
-      alert("Please fill in text, book, and author.");
-      return;
-    }
-
     const newPassage = {
-      id: Date.now(),
       text: formData.text,
       book: formData.book,
       author: formData.author,
       genre: formData.genre || "User Submitted",
       color: formData.color,
+      uid: user.uid,
+      userName: user.displayName,
+      userPhoto: user.photoURL,
     };
 
-    const newUserPosts = [...userPostsCloud, newPassage];
-    setUserPostsCloud(newUserPosts);
-    setPassages((prev) => [...prev, newPassage]);
+    // Save globally
+    const added = await addGlobalPost(newPassage);
 
-    // Save to Firestore
-    if (user && cloudLoaded) {
-      await saveUserData(user.uid, { posts: newUserPosts });
-    }
+    // Show instantly in feed
+    setPassages((prev) => [...prev, { id: added.id, ...newPassage }]);
 
-    setFormData({
-      text: "",
-      book: "",
-      author: "",
-      genre: "",
-      color: "from-indigo-900 to-purple-900",
-    });
-
+    // Reset form
     setShowAddForm(false);
-
-    // scroll to the new passage
-    setTimeout(() => {
-      scrollToIndex(passages.length); // previous length is new index
-    }, 200);
+    scrollToIndex(passages.length);
   };
+
 
   //---------------------------------------------------------
   // PROFILE DRAWER FILTERS
@@ -323,73 +327,71 @@ export default function BookReels() {
 
       {/* ========= PROFILE DRAWER (LEFT SIDE) ========= */}
       {showProfilePanel && user && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex justify-start">
-          <div className="w-80 h-full bg-black p-6 overflow-y-auto border-r border-white/20">
-            <button
-              onClick={() => setShowProfilePanel(false)}
-              className="text-white/70 hover:text-white mb-6"
-            >
-              ✕ Close
-            </button>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999] flex justify-start">
+        <div className="w-80 h-full bg-gray-900 p-6 overflow-y-auto border-r border-gray-700">
 
-            {/* User Info */}
-            <div className="flex items-center gap-3 mb-6">
-              <img
-                src={user.photoURL}
-                className="w-14 h-14 rounded-full border border-white/20"
-                alt="profile"
-              />
-              <div>
-                <p className="text-white font-semibold">{user.displayName}</p>
-                <p className="text-white/60 text-sm">{user.email}</p>
-              </div>
+          <button
+            onClick={() => setShowProfilePanel(false)}
+            className="text-white/70 hover:text-white mb-6"
+          >
+            ✕ Close
+          </button>
+
+          {/* User Info */}
+          <div className="flex items-center gap-3 mb-6">
+            <img
+              src={user.photoURL}
+              className="w-14 h-14 rounded-full border border-white/20"
+            />
+            <div>
+              <p className="text-white font-semibold">{user.displayName}</p>
+              <p className="text-white/60 text-sm">{user.email}</p>
             </div>
-
-            {/* My Posts */}
-            <h2 className="text-white text-lg font-bold mb-2">My Posts</h2>
-            {myPosts.length === 0 ? (
-              <p className="text-white/40 mb-6">You have no posts yet.</p>
-            ) : (
-              myPosts.map((p) => (
-                <div key={p.id} className="bg-white/10 p-4 rounded-lg mb-4">
-                  <p className="font-serif mb-1">"{p.text}"</p>
-                  <p className="text-sm">{p.book}</p>
-                </div>
-              ))
-            )}
-
-            {/* Liked */}
-            <h2 className="text-white text-lg font-bold mb-2 mt-4">
-              Liked Posts
-            </h2>
-            {likedPosts.length === 0 ? (
-              <p className="text-white/40 mb-6">No liked posts.</p>
-            ) : (
-              likedPosts.map((p) => (
-                <div key={p.id} className="bg-white/10 p-4 rounded-lg mb-4">
-                  <p className="font-serif mb-1">"{p.text}"</p>
-                  <p className="text-sm">{p.book}</p>
-                </div>
-              ))
-            )}
-
-            {/* Saved */}
-            <h2 className="text-white text-lg font-bold mb-2 mt-4">
-              Saved Posts
-            </h2>
-            {savedPosts.length === 0 ? (
-              <p className="text-white/40">No saved posts.</p>
-            ) : (
-              savedPosts.map((p) => (
-                <div key={p.id} className="bg-white/10 p-4 rounded-lg mb-4">
-                  <p className="font-serif mb-1">"{p.text}"</p>
-                  <p className="text-sm">{p.book}</p>
-                </div>
-              ))
-            )}
           </div>
+
+          {/* My Posts */}
+          <h2 className="text-white text-lg font-bold mb-2">My Posts</h2>
+          {myPosts.length === 0 ? (
+            <p className="text-white/40 mb-6">You have no posts yet.</p>
+          ) : (
+            myPosts.map((p) => (
+              <div key={p.id} className="bg-gray-800 p-4 rounded-lg mb-4">
+                <p className="text-white font-serif mb-1">"{p.text}"</p>
+                <p className="text-white/80 text-sm">{p.book}</p>
+              </div>
+            ))
+          )}
+
+          {/* Liked */}
+          <h2 className="text-white text-lg font-bold mb-2">Liked Posts</h2>
+          {likedPosts.length === 0 ? (
+            <p className="text-white/40 mb-6">No liked posts.</p>
+          ) : (
+            likedPosts.map((p) => (
+              <div key={p.id} className="bg-gray-800 p-4 rounded-lg mb-4">
+                <p className="text-white font-serif mb-1">"{p.text}"</p>
+                <p className="text-white/80 text-sm">{p.book}</p>
+              </div>
+            ))
+          )}
+
+          {/* Saved */}
+          <h2 className="text-white text-lg font-bold mb-2">Saved Posts</h2>
+          {savedPosts.length === 0 ? (
+            <p className="text-white/40">No saved posts.</p>
+          ) : (
+            savedPosts.map((p) => (
+              <div key={p.id} className="bg-gray-800 p-4 rounded-lg mb-4">
+                <p className="text-white font-serif mb-1">"{p.text}"</p>
+                <p className="text-white/80 text-sm">{p.book}</p>
+              </div>
+            ))
+          )}
+
         </div>
-      )}
+      </div>
+    )}
+
 
       {/* ========= ADD PASSAGE MODAL ========= */}
       {showAddForm && (

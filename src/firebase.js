@@ -12,6 +12,12 @@ import {
   doc,
   getDoc,
   setDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -70,4 +76,25 @@ export async function loadUserData(uid) {
 export async function saveUserData(uid, data) {
   const userRef = doc(db, "users", uid);
   await setDoc(userRef, data, { merge: true });
+}
+
+export async function addGlobalPost(data) {
+  // data: { text, book, author, genre, color, uid, userName, userPhoto }
+  const postsRef = collection(db, "posts");
+  const docRef = await addDoc(postsRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+  return docRef; // you can use docRef.id in the UI if needed
+}
+
+export async function loadGlobalPosts() {
+  const postsRef = collection(db, "posts");
+  const q = query(postsRef, orderBy("createdAt", "asc"));
+
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 }
