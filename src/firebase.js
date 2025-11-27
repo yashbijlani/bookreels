@@ -18,6 +18,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -97,4 +98,9 @@ export async function loadGlobalPosts() {
     id: d.id,
     ...d.data(),
   }));
+}
+
+export async function deleteGlobalPost(postId) {
+  const ref = doc(db, "posts", postId);
+  await deleteDoc(ref);
 }

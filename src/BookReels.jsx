@@ -15,6 +15,7 @@ import {
   saveUserData,
   addGlobalPost,
   loadGlobalPosts,
+  deleteGlobalPost, 
 } from "./firebase";
 
 // Default static passages
@@ -131,6 +132,17 @@ export default function BookReels() {
     const openDrawer = () => setShowProfilePanel(true);
     window.addEventListener("open-profile-drawer", openDrawer);
     return () => window.removeEventListener("open-profile-drawer", openDrawer);
+  }, []);
+
+  // ESCAPE KEY closes drawer
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setShowProfilePanel(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
   //---------------------------------------------------------
@@ -295,6 +307,20 @@ const handleSubmitPassage = async (e) => {
     setShowAddForm(false);
     scrollToIndex(passages.length);
   };
+  
+const handleDeletePost = async (postId) => {
+  if (!user) return;
+
+  const confirmDelete = window.confirm("Delete this passage?");
+  if (!confirmDelete) return;
+
+  // Remove from UI immediately
+  setUserPostsCloud(prev => prev.filter(p => p.id !== postId));
+  setPassages(prev => prev.filter(p => p.id !== postId));
+
+  // Remove from Firestore
+  await deleteGlobalPost(postId);
+};
 
 
   //---------------------------------------------------------
@@ -351,16 +377,26 @@ const handleSubmitPassage = async (e) => {
 
           {/* My Posts */}
           <h2 className="text-white text-lg font-bold mb-2">My Posts</h2>
-          {myPosts.length === 0 ? (
+            {myPosts.length === 0 ? (
             <p className="text-white/40 mb-6">You have no posts yet.</p>
           ) : (
             myPosts.map((p) => (
-              <div key={p.id} className="bg-gray-800 p-4 rounded-lg mb-4">
+              <div key={p.id} className="bg-gray-800 p-4 rounded-lg mb-4 relative">
+
+                {/* DELETE BUTTON */}
+                <button
+                  onClick={() => handleDeletePost(p.id)}
+                  className="absolute top-2 right-2 text-red-400 hover:text-red-300 text-sm"
+                >
+                  ✕
+                </button>
+
                 <p className="text-white font-serif mb-1">"{p.text}"</p>
                 <p className="text-white/80 text-sm">{p.book}</p>
               </div>
             ))
           )}
+
 
           {/* Liked */}
           <h2 className="text-white text-lg font-bold mb-2">Liked Posts</h2>
